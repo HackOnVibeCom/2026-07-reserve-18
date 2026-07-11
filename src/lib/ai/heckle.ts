@@ -1,16 +1,8 @@
 import axios from "axios";
 import { PERSONAS } from "../personas";
 
-const TONALITY_PROMPTS = {
-  Kind: "Be constructive, warm, and highly supportive. Give feedback gently.",
-  Professional: "Be formal, objective, and strictly professional.",
-  Brutal: "Be ruthless, cynical, and brutally honest. Do not hold back any criticism.",
-  Twitter: "Act like an unhinged, edgy reply-guy on Twitter. Use internet slang, be dismissive, and be brief."
-};
-
-export async function getPersonaResponse(personaKey: keyof typeof PERSONAS, pitch: string, brutality: keyof typeof TONALITY_PROMPTS = "Professional") {
+export async function getPersonaResponse(personaKey: keyof typeof PERSONAS, pitch: string, assetType: string, audience: string) {
   const persona = PERSONAS[personaKey];
-  const tonality = TONALITY_PROMPTS[brutality];
 
   try {
     let res;
@@ -20,15 +12,15 @@ export async function getPersonaResponse(personaKey: keyof typeof PERSONAS, pitc
         res = await axios.post(
           "https://openrouter.ai/api/v1/chat/completions",
           {
-            model: "nvidia/nemotron-4-340b-instruct:free",
+            model: "tencent/hy3:free",
             messages: [
               {
                 role: "system",
-                content: `You are ${persona.name}. ${persona.systemPrompt}\n\nTONE INSTRUCTION: ${tonality}\n\nIMPORTANT: You must respond in valid JSON format exactly like this: {"response": "your in-character reaction", "wouldShare": "Yes" or "Maybe" or "No"}`,
+                content: `You are ${persona.name}. ${persona.systemPrompt}\n\nEVALUATION CONTEXT:\n- Asset Type: ${assetType}\n- Target Audience: ${audience}\n\nIMPORTANT: You must respond in valid JSON format exactly like this: {"response": "your in-character reaction", "wouldShare": "Yes" or "Maybe" or "No"}`,
               },
               {
                 role: "user",
-                content: `Here is a pitch I am launching:\n\n${pitch}`,
+                content: `Here is the ${assetType} I am launching:\n\n${pitch}`,
               },
             ],
             temperature: 0.7,
@@ -74,13 +66,13 @@ export async function getPersonaResponse(personaKey: keyof typeof PERSONAS, pitc
       wouldShare: parsed.wouldShare || "Maybe"
     };
   } catch (error: any) {
-    throw new Error(`OpenRouter API failed for persona ${personaKey}: ${error.message}`);
+    throw new Error(`OpenRouter API failed for persona ${personaKey}: ${error.message} - ${JSON.stringify(error.response?.data)}`);
   }
 }
 
-export async function runGauntlet(pitch: string, selectedPersonas: (keyof typeof PERSONAS)[], brutality: keyof typeof TONALITY_PROMPTS) {
+export async function runGauntlet(pitch: string, selectedPersonas: (keyof typeof PERSONAS)[], assetType: string, audience: string) {
   const promises = selectedPersonas.map(async (key) => {
-    const result = await getPersonaResponse(key, pitch, brutality);
+    const result = await getPersonaResponse(key, pitch, assetType, audience);
     return { persona: key, response: result.response, wouldShare: result.wouldShare };
   });
 
