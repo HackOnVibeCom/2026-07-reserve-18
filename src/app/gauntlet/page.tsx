@@ -8,19 +8,40 @@ import { play, bind } from "cuelume";
 import { playPaperSlap } from "@/lib/audio";
 
 const ICONS = {
-  ph_commenter: ShieldAlert,
-  journalist: Newspaper,
-  reply_guy: Search,
-  investor: Briefcase
+  ph_early_adopter: ShieldAlert,
+  mobile_tech_journalist: Newspaper,
+  social_media_scroller: Search,
+  app_investor: Briefcase,
+  app_store_browser: Search,
+  first_time_user: Zap
 };
 
-const BRUTALITIES = ["Kind", "Professional", "Brutal", "Twitter"];
+const ASSET_TYPES = [
+  "App Store Description",
+  "Product Hunt Launch",
+  "X/Twitter Launch Thread",
+  "TikTok Caption",
+  "Press Email",
+  "Landing Page Hero",
+  "Reddit Launch Post"
+];
+
+const AUDIENCES = [
+  "Student",
+  "Parent",
+  "Gamer",
+  "Productivity User",
+  "Developer",
+  "Creator"
+];
 
 const PERSONA_CUES: Record<string, any> = {
-  ph_commenter: 'tick',
-  journalist: 'whisper',
-  reply_guy: 'sparkle',
-  investor: 'droplet'
+  ph_early_adopter: 'tick',
+  mobile_tech_journalist: 'whisper',
+  social_media_scroller: 'sparkle',
+  app_investor: 'droplet',
+  app_store_browser: 'bloom',
+  first_time_user: 'success'
 };
 
 const AMBIENT_COPY = [
@@ -39,7 +60,8 @@ export default function GauntletPage() {
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>(
     Object.keys(PERSONAS)
   );
-  const [brutality, setBrutality] = useState("Professional");
+  const [assetType, setAssetType] = useState(ASSET_TYPES[0]);
+  const [audience, setAudience] = useState(AUDIENCES[0]);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
 
   type LoadingPhase = "idle" | "personas" | "report" | "complete" | "error";
@@ -181,7 +203,7 @@ export default function GauntletPage() {
         const res = await fetch("/api/persona", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pitch: pitchToRun, personaKey: p, brutality }),
+          body: JSON.stringify({ pitch: pitchToRun, personaKey: p, assetType, audience }),
         });
 
         const data = await res.json();
@@ -203,7 +225,7 @@ export default function GauntletPage() {
       const reportRes = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pitch: pitchToRun, personaResponses: responses }),
+        body: JSON.stringify({ pitch: pitchToRun, personaResponses: responses, assetType, audience }),
       });
 
       play("chime");
@@ -315,25 +337,40 @@ export default function GauntletPage() {
                 className="w-full h-48 p-4 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-[var(--ink)] focus:outline-none focus:border-[var(--accent)] resize-none transition-colors shadow-sm"
               />
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 mt-2">
                 <label className="text-[var(--muted)] text-sm font-semibold uppercase tracking-wider">
-                  Tone Slider
+                  What are you testing?
                 </label>
-                <div className="flex bg-[var(--line)] p-1 rounded-xl">
-                  {BRUTALITIES.map((level) => (
+                <div className="flex flex-wrap gap-2">
+                  {ASSET_TYPES.map((type) => (
                     <button
-                      key={level}
-                      onClick={() => setBrutality(level)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                        brutality === level
-                          ? "bg-[var(--bg)] text-[var(--ink)] shadow-sm"
-                          : "text-[var(--muted)] hover:text-[var(--ink)]"
+                      key={type}
+                      onClick={() => setAssetType(type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 border ${
+                        assetType === type
+                          ? "bg-[var(--ink)] text-white border-[var(--ink)] shadow-sm"
+                          : "bg-white text-[var(--muted)] border-[var(--line)] hover:border-[var(--muted)] hover:text-[var(--ink)]"
                       }`}
                     >
-                      {level}
+                      {type}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-2">
+                <label className="text-[var(--muted)] text-sm font-semibold uppercase tracking-wider">
+                  Target Audience
+                </label>
+                <select
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-[var(--ink)] font-semibold focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+                >
+                  {AUDIENCES.map((aud) => (
+                    <option key={aud} value={aud}>{aud}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-3 mt-2">
@@ -592,7 +629,32 @@ export default function GauntletPage() {
               </div>
             </div>
 
-            {/* --- PHASE 3: SCORECARD --- */}
+            {/* --- PHASE 3: LAUNCH IMPACT --- */}
+            <div className="flex flex-col gap-6">
+              <h3 className="font-semibold text-sm uppercase tracking-widest text-[var(--muted)] border-l-2 border-[var(--line)] pl-3">Launch Impact</h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(["downloadIntent", "shareability", "mediaPotential", "storeConversionConfidence"] as const).map(
+                  (dim) => {
+                    const val = results.report.launchImpact?.[dim] || 0;
+                    const labels: Record<string, string> = {
+                      downloadIntent: "Download Intent",
+                      shareability: "Shareability",
+                      mediaPotential: "Media Potential",
+                      storeConversionConfidence: "Store Conversion"
+                    };
+                    return (
+                      <div key={dim} className="p-5 rounded-xl bg-white border border-[var(--line)] flex flex-col gap-3 shadow-sm text-center">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] leading-tight">{labels[dim]}</span>
+                        <span className="font-display text-4xl text-[var(--ink)]">{val}%</span>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            {/* --- PHASE 4: SCORECARD --- */}
             <div className="flex flex-col gap-6">
               <h3 className="font-semibold text-sm uppercase tracking-widest text-[var(--muted)] border-l-2 border-[var(--line)] pl-3">Scorecard</h3>
               
@@ -668,9 +730,32 @@ export default function GauntletPage() {
               </div>
             </div>
 
-            {/* --- PHASE 4: REWRITE --- */}
+            {/* --- PHASE 5: PROMOTION COVERAGE MAP --- */}
             <div className="flex flex-col gap-6">
-              <h3 className="font-semibold text-sm uppercase tracking-widest text-[var(--muted)] border-l-2 border-[var(--line)] pl-3">Rewrite</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-widest text-[var(--muted)] border-l-2 border-[var(--line)] pl-3">Promotion Coverage Map</h3>
+              <div className="p-6 rounded-2xl bg-[var(--bg)] border border-[var(--line)] shadow-sm">
+                <p className="text-sm text-[var(--muted)] mb-4">Recommended assets for a complete launch strategy:</p>
+                <div className="flex flex-col gap-3">
+                  {results.report.promotionCoverageMap?.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between border-b border-[var(--line)] pb-3 last:border-0 last:pb-0">
+                      <span className="font-medium text-sm text-[var(--ink)]">{item.asset}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                        item.status === "Strong" ? "bg-[var(--accent)] text-white" :
+                        item.status === "Weak" ? "bg-amber-100 text-amber-700" :
+                        item.status === "Optional" ? "bg-[var(--line)] text-[var(--muted)]" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {item.status.toUpperCase()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* --- PHASE 6: REWRITE --- */}
+            <div className="flex flex-col gap-6">
+              <h3 className="font-semibold text-sm uppercase tracking-widest text-[var(--muted)] border-l-2 border-[var(--line)] pl-3">Targeted Rewrite</h3>
               
               <div className="p-8 rounded-2xl bg-[var(--accent-soft)] border border-[var(--line)] shadow-sm relative">
                 <div className="flex flex-col gap-6">
