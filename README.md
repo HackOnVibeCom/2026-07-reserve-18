@@ -114,7 +114,7 @@ Promotion Coverage Map
 
 ### AI
 - OpenRouter
-- `poolside/laguna-m.1:free` (Reasoning-enabled LLM)
+- `google/gemma-4-31b-it:free` (Reasoning-enabled LLM)
 
 ### Design
 - Custom Editorial Design System
